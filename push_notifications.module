@@ -1039,14 +1039,17 @@ function push_notifications_fcm_send_message($tokens, $payload) {
     $data['collapse_key'] = (string) time();
     $data['data']['message'] = $payload['alert'];
 
-    $request_result = drupal_http_request(PUSH_NOTIFICATIONS_FCM_SERVER_POST_URL, array(
+    $options =  array(
       'headers' => array(
         'Content-Type' => 'application/json',
         'Authorization' => 'key=' . PUSH_NOTIFICATIONS_FCM_SERVER_KEY,
-      ),
-      'method' => 'POST',
-      'data' => drupal_json_encode($data),
-    ));
+    ),
+    'method' => 'POST',
+    'data' => drupal_json_encode($data),
+    );
+    watchdog('push_notifications', 'Making FCM request to: !to,<br/><pre>!options</pre>', array('!to' => PUSH_NOTIFICATIONS_FCM_SERVER_POST_URL, '!options' => print_r($options, TRUE)), WATCHDOG_DEBUG);
+    $request_result = drupal_http_request(PUSH_NOTIFICATIONS_FCM_SERVER_POST_URL, $options);
+
 
     $response = FALSE;
     if (isset($request_result)) {
