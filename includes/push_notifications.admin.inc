@@ -423,6 +423,21 @@ function push_notifications_mass_push_form($form_state) {
     '#weight' => 10,
   );
 
+  if (variable_get('push_notifications_google_type', 0) == '2' && variable_get('push_notifications_fcm_server_key', FALSE)) {
+    // we are using FCM, we can have additional information
+    $form['message']['body'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Firebase message body'),
+      '#weight' => 11,
+    );
+    //$form['message']['data'] = array(
+    //  '#type' => 'textarea',
+    //  '#title' => t('Firebase data'),
+    //  '#description' => t('This data will be passed directly, I suggest using JSON.'),
+    //  '#weight' => 11,
+    //);
+  }
+
   if (module_exists('locale')) {
     $form['language'] = array(
       '#type' => 'select',
