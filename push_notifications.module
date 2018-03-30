@@ -757,18 +757,13 @@ function push_notifications_c2dm_token() {
     'service'       => 'ac2dm',
   );
 
-  $curl = curl_init();
-  curl_setopt($curl, CURLOPT_URL, PUSH_NOTIFICATIONS_C2DM_CLIENT_LOGIN_ACTION_URL);
-  curl_setopt($curl, CURLOPT_FOLLOWLOCATION, TRUE);
-  curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
-  curl_setopt($curl, CURLOPT_POST, TRUE);
-  curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
-  curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-  $response = curl_exec($curl);
-  curl_close($curl);
+  $request_result = drupal_http_request(PUSH_NOTIFICATIONS_C2DM_CLIENT_LOGIN_ACTION_URL, array(
+    'method' => 'POST',
+    'data' => $data,
+  ));
 
   // Get the auth token.
-  preg_match("/Auth=([a-z0-9_\-]+)/i", $response, $matches);
+  preg_match("/Auth=([a-z0-9_\-]+)/i", $request_result->data, $matches);
   $auth_token = $matches[1];
 
   if (!$auth_token) {
@@ -819,10 +814,6 @@ function push_notifications_c2dm_send_message($tokens, $payload) {
     'message' => '',
   );
 
-  // Define the header.
-  $headers = array();
-  $headers[] = 'Authorization: GoogleLogin auth=' . $auth_token;
-
   // Send a push notification to every recipient.
   foreach ($tokens as $token) {
     $result['count_attempted']++;
@@ -840,24 +831,21 @@ function push_notifications_c2dm_send_message($tokens, $payload) {
     $data['collapse_key'] = time();
     $data['data.message'] = $payload['alert'];
 
-    $curl = curl_init();
-    curl_setopt($curl, CURLOPT_URL, PUSH_NOTIFICATIONS_C2DM_SERVER_POST_URL);
-    curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, FALSE);
-    curl_setopt($curl, CURLOPT_POST, TRUE);
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
-    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-    $response = curl_exec($curl);
-    $info = curl_getinfo($curl);
-    curl_close($curl);
+    $request_result = drupal_http_request(PUSH_NOTIFICATIONS_C2DM_SERVER_POST_URL, array(
+      'headers' => array(
+        'Authorization' => 'GoogleLogin auth=' . $auth_token,
+      ),
+      'method' => 'POST',
+      'data' => $data,
+    ));
 
     // If Google's server returns a reply, but that reply includes an error, log the error message.
-    if ($info['http_code'] == 200 && (isset($response) && preg_match('/Error/', $response))) {
-      watchdog('push_notifications', "Google's Server returned an error: " . $response, NULL, WATCHDOG_ERROR);
+    if ($request_result->code == 200 && (isset($request_result->data) && preg_match('/Error/', $request_result->data))) {
+      watchdog('push_notifications', 'Google\'s Server returned an error: <pre>!result</pre>', array('!result' => print_r($request_result, TRUE)), WATCHDOG_ERROR);
 
       // If the device token is invalid or not registered (anymore because the user
       // has uninstalled the application), remove this device token.
-      if (preg_match('/InvalidRegistration/', $response) || preg_match('/NotRegistered/', $response)) {
+      if (preg_match('/InvalidRegistration/', $request_result->data) || preg_match('/NotRegistered/', $request_result->data)) {
         push_notifications_purge_token($token, PUSH_NOTIFICATIONS_TYPE_ID_ANDROID);
         watchdog('daddyhunt_apns', 'C2DM token not valid anymore. Removing token ' . $token);
       }
@@ -865,7 +853,7 @@ function push_notifications_c2dm_send_message($tokens, $payload) {
 
     // Success if the http response status is 200 and the response
     // data does not containt the word "Error".
-    if ($info['http_code'] == 200 && (isset($response) && !preg_match('/Error/', $response))) {
+    if ($request_result->code == 200 && (isset($request_result->data) && !preg_match('/Error/', $request_result->data))) {
       $result['count_success']++;
     }
   }
@@ -920,12 +908,6 @@ function push_notifications_gcm_send_message($tokens, $payload) {
     'message' => '',
   );
 
-  // Define the header.
-  $headers = array();
-  $headers[] = 'Content-Type:application/json';
-  $headers[] = 'Authorization:key=' . PUSH_NOTIFICATIONS_GCM_API_KEY;
-
-
   // Check of many token bundles can be build.
   $token_bundles = ceil(count($tokens) / 1000);
   $result['count_attempted'] = count($tokens);
@@ -948,26 +930,24 @@ function push_notifications_gcm_send_message($tokens, $payload) {
     $data['collapse_key'] = (string) time();
     $data['data']['message'] = $payload['alert'];
 
-    $curl = curl_init();
-    curl_setopt($curl, CURLOPT_URL, PUSH_NOTIFICATIONS_GCM_SERVER_POST_URL);
-    curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, FALSE);
-    curl_setopt($curl, CURLOPT_POST, TRUE);
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
-    curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
-    $response_raw = curl_exec($curl);
-    $info = curl_getinfo($curl);
-    curl_close($curl);
+    $request_result = drupal_http_request(PUSH_NOTIFICATIONS_GCM_SERVER_POST_URL, array(
+      'headers' => array(
+        'Content-Type' => 'application/json',
+        'Authorization' => 'key=' . PUSH_NOTIFICATIONS_GCM_API_KEY,
+      ),
+      'method' => 'POST',
+      'data' => drupal_json_encode($data),
+    ));
 
     $response = FALSE;
-    if (isset($response_raw)) {
-      $response = json_decode($response_raw);
+    if (isset($request_result->data)) {
+      $response = json_decode($request_result->data);
     }
 
     // If Google's server returns a reply, but that reply includes an error,
     // log the error message.
-    if ($info['http_code'] == 200 && (!empty($response->failure))) {
-      watchdog('push_notifications', "Google's Server returned an error: " . $response_raw, NULL, WATCHDOG_ERROR);
+    if ($request_result->code == 200 && (!empty($response->failure))) {
+      watchdog('push_notifications', 'Google\'s Server returned an error: <pre>!result</pre>', array('!result' => print_r($request_result, TRUE)), WATCHDOG_ERROR);
 
       // Analyze the failure.
       foreach ($response->results as $token_index => $message_result) {
@@ -983,7 +963,7 @@ function push_notifications_gcm_send_message($tokens, $payload) {
     }
 
     // Count the successful sent push notifications if there are any.
-    if ($info['http_code'] == 200 && !empty($response->success)) {
+    if ($request_result->code == 200 && !empty($response->success)) {
       $result['count_success'] += $response->success;
     }
   }
@@ -1037,11 +1017,6 @@ function push_notifications_fcm_send_message($tokens, $payload) {
     'message' => '',
   );
 
-  // Define the header.
-  $headers = array();
-  $headers[] = 'Content-Type:application/json';
-  $headers[] = 'Authorization: key=' . PUSH_NOTIFICATIONS_FCM_SERVER_KEY;
-
   // Check of many token bundles can be build.
   $token_bundles = ceil(count($tokens) / 1000);
   $result['count_attempted'] = count($tokens);
@@ -1064,26 +1039,24 @@ function push_notifications_fcm_send_message($tokens, $payload) {
     $data['collapse_key'] = (string) time();
     $data['data']['message'] = $payload['alert'];
 
-    $curl = curl_init();
-    curl_setopt($curl, CURLOPT_URL, PUSH_NOTIFICATIONS_FCM_SERVER_POST_URL);
-    curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, FALSE);
-    curl_setopt($curl, CURLOPT_POST, TRUE);
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
-    curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
-    $response_raw = curl_exec($curl);
-    $info = curl_getinfo($curl);
-    curl_close($curl);
+    $request_result = drupal_http_request(PUSH_NOTIFICATIONS_FCM_SERVER_POST_URL, array(
+      'headers' => array(
+        'Content-Type' => 'application/json',
+        'Authorization' => 'key=' . PUSH_NOTIFICATIONS_FCM_SERVER_KEY,
+      ),
+      'method' => 'POST',
+      'data' => drupal_json_encode($data),
+    ));
 
     $response = FALSE;
-    if (isset($response_raw)) {
-      $response = json_decode($response_raw);
+    if (isset($request_result)) {
+      $response = json_decode($request_result->data);
     }
 
     // If Google's server returns a reply, but that reply includes an error,
     // log the error message.
-    if ($info['http_code'] == 200 && (!empty($response->failure))) {
-      watchdog('push_notifications', "Google's Server returned an error: " . $response_raw, NULL, WATCHDOG_ERROR);
+    if ($request_result->code == 200 && (!empty($response->failure))) {
+      watchdog('push_notifications', 'Google\'s Server returned an error: <pre>!result</pre>', array('!result' => print_r($request_result, TRUE)), WATCHDOG_ERROR);
 
       // Analyze the failure.
       foreach ($response->results as $token_index => $message_result) {
@@ -1099,7 +1072,7 @@ function push_notifications_fcm_send_message($tokens, $payload) {
     }
 
     // Count the successful sent push notifications if there are any.
-    if ($info['http_code'] == 200 && !empty($response->success)) {
+    if ($request_result->code == 200 && !empty($response->success)) {
       $result['count_success'] += $response->success;
     }
   }
