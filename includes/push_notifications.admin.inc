@@ -141,6 +141,12 @@ function push_notifications_admin_form($form_state) {
     '#description' => t('Configure Push Notifications for Apple\'s Push Notification Server. Select your environment. Both environments require the proper certificates in the \'certificates\' folder of this module.<br />The filename for the development certificate should be \'!cert_name_development\', the production certificate should be \'!cert_name_production\'. See !link for instructions on creating certificates.', $configuration_apns_replacements),
   );
 
+  $form['configuration_apns']['push_notification_apns_firebase'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use Firebase for APNS push notifications.'),
+    '#default_value' => variable_get('push_notification_apns_firebase', FALSE),
+  );
+
   if (variable_get('push_notifications_apns_certificate_random', '') == '') {
     $regenerate_certificate_string_description = t('Your certificate name is currently set to the default. To increase security, click here to create a custom name for your APNS certificates. Please note that you will have to change the filenames for both certificate files afterwards.');
   }
@@ -151,12 +157,22 @@ function push_notifications_admin_form($form_state) {
     '#type' => 'item',
     '#title' => t('APNS Certificate Name'),
     '#markup' => $regenerate_certificate_string_description,
+    '#states' => array(
+      'invisible' => array(
+        ':input[name="push_notification_apns_firebase"]' => array('checked' => TRUE),
+      ),
+    ),
   );
 
   $form['configuration_apns']['regenerate_certificate_string'] = array(
     '#type' => 'submit',
     '#value' => t('Generate new certificate string'),
     '#submit' => array('push_notifications_regenerate_certificate_string_submit'),
+    '#states' => array(
+      'invisible' => array(
+        ':input[name="push_notification_apns_firebase"]' => array('checked' => TRUE),
+      ),
+    ),
   );
 
   $form['configuration_apns']['push_notifications_apns_environment'] = array(
@@ -168,6 +184,11 @@ function push_notifications_admin_form($form_state) {
       1 => 'Production',
     ),
     '#default_value' => variable_get('push_notifications_apns_environment', 0),
+    '#states' => array(
+      'invisible' => array(
+        ':input[name="push_notification_apns_firebase"]' => array('checked' => TRUE),
+      ),
+    ),
   );
 
   $form['configuration_apns']['stream_context_limit'] = array(
@@ -176,6 +197,11 @@ function push_notifications_admin_form($form_state) {
     '#description' => t('Defines the amount of messages sent per stream limit, i.e. how many notifications are sent per connection created with Apple\'s servers. The higher the limit, the faster the message delivery. If the limit is too high, messages might not get delivered at all. Unclear (to me) what Apple\'s <em>actual</em> limit is.'),
     '#options' => drupal_map_assoc(array(1, 5, 10, 25, 50)),
     '#default_value' => variable_get('push_notifications_apns_stream_context_limit', 1),
+    '#states' => array(
+      'invisible' => array(
+        ':input[name="push_notification_apns_firebase"]' => array('checked' => TRUE),
+      ),
+    ),
   );
 
   $form['configuration_apns']['passphrase'] = array(
@@ -183,6 +209,11 @@ function push_notifications_admin_form($form_state) {
     '#title' => t('Passphrase'),
     '#description' => t('If your APNS certificate has a passphrase, enter it here. Otherwise, leave this field blank.'),
     '#default_value' => variable_get('push_notifications_apns_passphrase', ''),
+    '#states' => array(
+      'invisible' => array(
+        ':input[name="push_notification_apns_firebase"]' => array('checked' => TRUE),
+      ),
+    ),
   );
 
   $form['configuration_apns']['push_notifications_apns_certificate_folder'] = array(
@@ -190,6 +221,11 @@ function push_notifications_admin_form($form_state) {
     '#title' => t('APNS Certificate Folder Path'),
     '#description' => t('The preferred location for the certificate files is a folder outside of your web root, i.e. a folder not accessible through the Internet. Specify the full path here, e.g. \'/users/danny/drupal_install/certificates/\'. If you are using the \'certificates\' folder within the module directory, leave this field blank.'),
     '#default_value' => variable_get('push_notifications_apns_certificate_folder', ''),
+    '#states' => array(
+      'invisible' => array(
+        ':input[name="push_notification_apns_firebase"]' => array('checked' => TRUE),
+      ),
+    ),
   );
 
   $form['configuration_apns']['push_notifications_set_entrust_certificate'] = array(
@@ -201,6 +237,11 @@ function push_notifications_admin_form($form_state) {
       '!link_kb' => l('Knowledgebase Article', 'http://stackoverflow.com/questions/4817520/why-ssl-of-entrust-ssl-certificate-is-required-for-apns', array('attributes' => array('target' => '_blank'))),
     )),
     '#default_value' => variable_get('push_notifications_set_entrust_certificate', 0),
+    '#states' => array(
+      'invisible' => array(
+        ':input[name="push_notification_apns_firebase"]' => array('checked' => TRUE),
+      ),
+    ),
   );
 
   $form['configuration_c2dm'] = array(
@@ -284,6 +325,7 @@ function push_notifications_admin_form($form_state) {
     '#title' => t('Server key'),
     '#description' => t('Enter the Server key for your Firebase project'),
     '#default_value' => variable_get('push_notifications_fcm_server_key', ''),
+    '#maxlength' => 256,
   );
 
   $form['submit'] = array(
@@ -320,6 +362,7 @@ function push_notifications_admin_form_submit($form, &$form_state) {
   variable_set('push_notifications_privatemsg_integration', $form_state['values']['push_notifications_privatemsg_integration']);
 
   $apns_environment = $form_state['values']['push_notifications_apns_environment'];
+  variable_set('push_notification_apns_firebase', $form_state['values']['push_notification_apns_firebase']);
   switch ($apns_environment) {
     // Development Environment.
     case 0:
@@ -528,9 +571,15 @@ function push_notifications_mass_push_form_submit($form, &$form_state) {
       'language' => $language,
     ));
     if (!empty($tokens_ios)) {
-      // Convert the payload into the correct format for APNS.
-      $payload_apns = array('aps' => $payload);
-      $result = push_notifications_apns_send_message($tokens_ios, $payload_apns);
+      if (variable_get('push_notification_apns_firebase', 0)) {
+        // the setting is to use FCM to send APNS notifications
+        $result = push_notifications_fcm_send_message($tokens_ios, $payload);
+      }
+      else {
+        // Convert the payload into the correct format for APNS.
+        $payload_apns = array('aps' => $payload);
+        $result = push_notifications_apns_send_message($tokens_ios, $payload_apns);
+      }dpm($result, '$result');
       $dsm_type = ($result['success']) ? 'status' : 'error';
       drupal_set_message($result['message'], $dsm_type);
     }
