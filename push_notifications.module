@@ -233,6 +233,28 @@ function push_notifications_services_resources() {
           ),
         ),
       ),
+      'targeted_actions' => array(
+        'remove' => array(
+          'help' => 'Removes a registered device token. Only needs the token.',
+          'callback' => '_push_notifications_service_delete_device_token',
+          'file' => array(
+            'type' => 'inc',
+            'module' => 'push_notifications',
+            'name' => 'includes/push_notifications.service'
+          ),
+          'access arguments' => array('remove device token'),
+          'access arguments append' => FALSE,
+          'args' => array(
+            array(
+              'name' => 'token',
+              'type' => 'string',
+              'description' => 'Device Token',
+              'optional' => FALSE,
+              'source' => array('path' => '0'),
+            ),
+          ),
+        ),
+      ),
     ),
   );
 }
