@@ -1041,9 +1041,9 @@ function push_notifications_fcm_send_message($tokens, $payload) {
     if (!empty($payload['body'])) {
       $data['notification']['body'] = $payload['body'];
     }
-    if (!empty($payload['data'])) {
-      $data['data'] = drupal_json_decode($payload['data']);
-    }
+    //if (!empty($payload['data'])) {
+    //  $data['data'] = drupal_json_decode($payload['data']);
+    //}
 
     $options =  array(
       'headers' => array(

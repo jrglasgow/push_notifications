@@ -473,6 +473,12 @@ function push_notifications_mass_push_form($form_state) {
       '#title' => t('Firebase message body'),
       '#weight' => 11,
     );
+    $form['message']['nid'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Node ID'),
+      '#description' => t('Node ID the user should be sent to from the notification.'),
+      '#weight' => 12,
+    );
     //$form['message']['data'] = array(
     //  '#type' => 'textarea',
     //  '#title' => t('Firebase data'),
@@ -579,7 +585,7 @@ function push_notifications_mass_push_form_submit($form, &$form_state) {
         // Convert the payload into the correct format for APNS.
         $payload_apns = array('aps' => $payload);
         $result = push_notifications_apns_send_message($tokens_ios, $payload_apns);
-      }dpm($result, '$result');
+      }
       $dsm_type = ($result['success']) ? 'status' : 'error';
       drupal_set_message($result['message'], $dsm_type);
     }
