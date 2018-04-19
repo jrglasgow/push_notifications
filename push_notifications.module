@@ -405,6 +405,8 @@ function push_notifications_store_token($token = '', $type_id = '', $uid = '', $
   $record->type = $type_id;
   $record->language = $language;
   $record->timestamp = time();
+  $record->session = session_id();
+  $record->email = (isset($_SESSION['email']) && !empty($_SESSION['email'])) ? $_SESSION['email'] : '';
   $result = drupal_write_record($table, $record);
 
   // Allow modules to react to the newly created record after creation.

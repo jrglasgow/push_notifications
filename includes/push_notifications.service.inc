@@ -61,7 +61,15 @@ function _push_notifications_service_create_device_token($data) {
   }
 
   // Determine if this token is already registered with the current user.
-  if (push_notifications_find_token($token, $uid)) {
+  if ($token = push_notifications_find_token($token, $uid)) {
+    // recored the session and email address if they exist
+    db_update('push_notifications_tokens')
+      ->condition('token', $token)
+      ->fields(array(
+        'session' => session_id(),
+        'email' => isset($_SESSION['email']) ? $_SESSION['email'] : '',
+      ))
+      ->execute();
     return array(
       'success' => 1,
       'message' => 'This token is already registered to this user.'

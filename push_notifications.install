@@ -117,6 +117,18 @@ function push_notifications_schema() {
         'length' => 11,
         'not null' => TRUE,
       ),
+      'session' => array(
+        'description' => 'the PHP session id which registered the token',
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => FALSE,
+      ),
+      'email' => array(
+        'description' => 'the email address associated with the session ID is any',
+        'type' => 'varchar',
+        'length' => '256',
+        'not null' => FALSE,
+      ),
     ),
     'primary key' => array('id'),
     'indexes' => array(
@@ -238,4 +250,23 @@ function push_notifications_update_7005() {
     'not null' => TRUE,
   );
   db_change_field($table, $field, $field, $field_new);
+}
+
+/**
+ * add session and email columns to the push_notifications_tokens table
+ */
+function push_notifications_update_7007() {
+  db_add_field('push_notifications_tokens', 'session', array(
+    'description' => 'the PHP session id which registered the token',
+    'type' => 'varchar',
+    'length' => '128',
+    'not null' => FALSE,
+  ));
+
+  db_add_field('push_notifications_tokens', 'email', array(
+    'description' => 'the email address associated with the session ID is any',
+    'type' => 'varchar',
+    'length' => '256',
+    'not null' => FALSE,
+  ));
 }
