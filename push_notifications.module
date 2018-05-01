@@ -329,7 +329,7 @@ function push_notifications_privatemsg_message_insert($message) {
  *   token stored. Optional, defaults to false.
  *
  * @return
- *   User ID of token, if found.
+ *   User ID of token, is found.
  */
 function push_notifications_find_token($token = '', $uid = '', $exclude = FALSE) {
   if ($token == '') {

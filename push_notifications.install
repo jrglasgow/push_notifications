@@ -264,7 +264,7 @@ function push_notifications_update_7007() {
   ));
 
   db_add_field('push_notifications_tokens', 'email', array(
-    'description' => 'the email address associated with the session ID is any',
+    'description' => 'the email address associated with the session ID if any',
     'type' => 'varchar',
     'length' => '256',
     'not null' => FALSE,
