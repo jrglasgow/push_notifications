@@ -35,7 +35,7 @@ define('PUSH_NOTIFICATIONS_APNS_PAYLOAD_SIZE_LIMIT', 2048);
 define('PUSH_NOTIFICATIONS_APNS_NOTIFICATION_SOUND', variable_get('push_notifications_apns_notification_sound', 'default'));
 // Boolean value to indicate wether Apple's feedback service should be called
 // on cron to remove unused tokens from our database.
-define('PUSH_NOTIFICATIONS_APNS_QUERY_FEEDBACK_SERVICE', variable_get('push_notifications_apns_query_feedback_service', 1));
+define('PUSH_NOTIFICATIONS_APNS_QUERY_FEEDBACK_SERVICE', variable_get('push_notifications_apns_query_feedback_service', 0));
 // Maximum of messages to send per stream context.
 define('PUSH_NOTIFICATIONS_APNS_STREAM_CONTEXT_LIMIT', variable_get('push_notifications_apns_stream_context_limit', 1));
 

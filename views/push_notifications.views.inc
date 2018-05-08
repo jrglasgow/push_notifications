@@ -119,6 +119,25 @@ function push_notifications_views_data() {
     );
   }
 
+  // Push Token.
+  $data['push_notifications_tokens']['email'] = array(
+    'title' => t('Email'),
+    'help' => t('The email associated with the token.'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+  );
+
   return $data;
 }
 

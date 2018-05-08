@@ -95,6 +95,10 @@ function push_notifications_views_default_views() {
   $handler->display->display_options['fields']['timestamp']['table'] = 'push_notifications_tokens';
   $handler->display->display_options['fields']['timestamp']['field'] = 'timestamp';
   $handler->display->display_options['fields']['timestamp']['date_format'] = 'short';
+  /* Field: Push Notifications: Email */
+  $handler->display->display_options['fields']['email']['id'] = 'email';
+  $handler->display->display_options['fields']['email']['table'] = 'push_notifications_tokens';
+  $handler->display->display_options['fields']['email']['field'] = 'email';
   /* Sort criterion: Push Notifications: Timestamp */
   $handler->display->display_options['sorts']['timestamp']['id'] = 'timestamp';
   $handler->display->display_options['sorts']['timestamp']['table'] = 'push_notifications_tokens';
@@ -129,6 +133,26 @@ function push_notifications_views_default_views() {
     2 => '2',
     1 => 0,
     3 => 0,
+  );
+  /* Filter criterion: Push Notifications: Email */
+  $handler->display->display_options['filters']['email']['id'] = 'email';
+  $handler->display->display_options['filters']['email']['table'] = 'push_notifications_tokens';
+  $handler->display->display_options['filters']['email']['field'] = 'email';
+  $handler->display->display_options['filters']['email']['operator'] = 'contains';
+  $handler->display->display_options['filters']['email']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['email']['expose']['operator_id'] = 'email_op';
+  $handler->display->display_options['filters']['email']['expose']['label'] = 'Email';
+  $handler->display->display_options['filters']['email']['expose']['operator'] = 'email_op';
+  $handler->display->display_options['filters']['email']['expose']['identifier'] = 'email';
+  $handler->display->display_options['filters']['email']['expose']['remember_roles'] = array(
+    2 => '2',
+    1 => 0,
+    3 => 0,
+    6 => 0,
+    7 => 0,
+    8 => 0,
+    9 => 0,
+    14 => 0,
   );
 
   /* Display: Tokens */
