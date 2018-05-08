@@ -131,6 +131,14 @@ function push_notifications_menu() {
     'file path' => drupal_get_path('module', 'push_notifications') . '/includes',
   );
 
+  $items['ajax/push_notifications/autocomplete'] = array(
+    'title' => 'Push notification autocomplete',
+    'page callback' => 'push_notifications_autocomplete',
+    'access arguments' => array('send push notifications'),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/push_notifications.admin.inc',
+  );
+
   return $items;
 }
 

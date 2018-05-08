@@ -507,11 +507,22 @@ function push_notifications_mass_push_form($form_state) {
   ) {
     $recipients_options['android'] = t('Android');
   }
-  $form['recipients'] = array(
+  $form['recipients_selection'] = array (
+    '#type' => 'fieldset',
+    '#title' => t('Choose Recipients'),
+  );
+  $form['recipients_selection']['recipients'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Recipients'),
     '#description' => t('Select the recipients for this push message'),
     '#options' => $recipients_options,
+  );
+
+  $form['recipients_selection']['recipient_emails'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Recipients Emails'),
+    '#description' => t('Send a token to users with the following email addresses, comma separated.'),
+    '#autocomplete_path' => 'ajax/push_notifications/autocomplete',
   );
 
   $form['submit'] = array(
@@ -524,12 +535,12 @@ function push_notifications_mass_push_form($form_state) {
 }
 
 
-
 /**
  * Validation handler for sending out a mass-push notification.
  */
 function push_notifications_mass_push_form_validate($form, &$form_state) {
   $recipients = $form_state['values']['recipients'];
+  $recipient_emails = $form_state['values']['recipient_emails'];
 
   // Define an empty array for the payload.
   $payload = array();
@@ -547,8 +558,8 @@ function push_notifications_mass_push_form_validate($form, &$form_state) {
   $form_state['values']['payload'] = $payload;
 
   // Make sure at least one recipient (group) is selected.
-  if (empty($recipients['ios']) && empty($recipients['android'])) {
-    form_set_error('recipients', t('No message was sent. Please select at least one recipient group.'));
+  if (empty($recipients['ios']) && empty($recipients['android']) && empty($recipient_emails)) {
+    form_set_error('recipients', t('No message was sent. Please select at least one recipient group or email.'));
   }
 
   // Validate that the message size is ok.
@@ -623,4 +634,46 @@ function push_notifications_mass_push_form_submit($form, &$form_state) {
       drupal_set_message(t('No Android recipients found, potentially for this language.'));
     }
   }
+  $recipient_emails = $form_state['values']['recipient_emails'];
+  if (!empty($recipient_emails)) {
+    dpm($recipient_emails, '$recipient_emails');
+    $emails_typed = drupal_explode_tags($recipient_emails);
+    $query = db_select('push_notifications_tokens')
+      ->fields('push_notifications_tokens', array('token'))
+      ->condition('email', $emails_typed, 'IN');
+    query_dpm($query);
+    $tokens = $query->execute()->fetchCol();
+    dpm($tokens, '$tokens');
+    $result = push_notifications_fcm_send_message($tokens, $payload);
+    dpm($result, '$result');
+  }
+}
+
+/**
+ * Autocomplete callback to pull up emails that have an associated registered token
+ */
+function push_notifications_autocomplete($emails_typed = '') {
+  $emails_typed = drupal_explode_tags($emails_typed);
+  $email_last = drupal_strtolower(array_pop($emails_typed));
+  $email_matches = array();
+  if ($email_last !== '') {
+    $query = db_select('push_notifications_tokens')
+      ->fields('push_notifications_tokens', array(
+      'email',
+    ))
+      ->condition('email', db_like($email_last) . '%', 'LIKE');
+    // Do not select already entered emails.
+    if (!empty($emails_typed)) {
+      $query
+        ->condition('t.name', $emails_typed, 'NOT IN');
+    }
+    $query->groupBy('email');
+    $query->range(0, 10);
+    $result = $query->execute()->fetchAll();
+    $prefix = count($emails_typed) ? drupal_implode_tags($emails_typed) . ', ' : '';
+    foreach ($result as $email) {
+      $email_matches[$email->email] = $email->email;
+    }
+  }
+  drupal_json_output($email_matches);
 }
