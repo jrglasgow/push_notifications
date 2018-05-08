@@ -417,6 +417,16 @@ function push_notifications_store_token($token = '', $type_id = '', $uid = '', $
   $record->email = (isset($_SESSION['email']) && !empty($_SESSION['email'])) ? $_SESSION['email'] : '';
   $result = drupal_write_record($table, $record);
 
+  // recored the session and email address if they exist
+  db_update('push_notifications_tokens')
+    ->condition('token', $token)
+    ->fields(array(
+      'session' => session_id(),
+      'email' => isset($_SESSION['email']) ? $_SESSION['email'] : '',
+    ))
+    ->execute();
+  $_SESSION['push_notifications']['token'] = $token;
+
   // Allow modules to react to the newly created record after creation.
   foreach(module_implements('push_notifications_post_store_token') as $module) {
     $function = $module . '_push_notifications_post_store_token';

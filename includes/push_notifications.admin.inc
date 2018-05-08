@@ -636,16 +636,12 @@ function push_notifications_mass_push_form_submit($form, &$form_state) {
   }
   $recipient_emails = $form_state['values']['recipient_emails'];
   if (!empty($recipient_emails)) {
-    dpm($recipient_emails, '$recipient_emails');
     $emails_typed = drupal_explode_tags($recipient_emails);
     $query = db_select('push_notifications_tokens')
       ->fields('push_notifications_tokens', array('token'))
       ->condition('email', $emails_typed, 'IN');
-    query_dpm($query);
     $tokens = $query->execute()->fetchCol();
-    dpm($tokens, '$tokens');
     $result = push_notifications_fcm_send_message($tokens, $payload);
-    dpm($result, '$result');
   }
 }
 
